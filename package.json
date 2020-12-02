@@ -1,0 +1,47 @@
+{
+  "name": "org-projects-dependency-manager",
+  "version": "0.0.1",
+  "description": "This action handles automated update of dependencies in package.json between projects from the same GitHub organization.",
+  "main": "lib/index.js",
+  "scripts": {
+    "start": "rimraf ./clones && node lib/index.js",
+    "dev": "DEBUG=simple-git npm start",
+    "package": "ncc build lib/index.js -o dist",
+    "gitAdd": "git add dist/index.js",
+    "gen-readme-toc": "markdown-toc -i README.md",
+    "lint": "eslint --max-warnings 0 .",
+    "lint-fix": "eslint --fix .",
+    "test": "npm run lint && jest"
+  },
+  "pre-commit": [
+    "package",
+    "gitAdd"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/derberg/org-projects-dependency-manager.git"
+  },
+  "author": "Lukasz Gornicki <lpgornicki@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/derberg/org-projects-dependency-manager/issues"
+  },
+  "homepage": "https://github.com/derberg/org-projects-dependency-manager#readme",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/github": "^4.0.0",
+    "execa": "^4.1.0",
+    "markdown-toc": "^1.2.0",
+    "npm": "^6.14.9",
+    "simple-git": "^2.20.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.23.0",
+    "eslint": "^7.7.0",
+    "eslint-plugin-jest": "^23.20.0",
+    "eslint-plugin-sonarjs": "^0.5.0",
+    "jest": "^26.4.1",
+    "pre-commit": "^1.2.2",
+    "rimraf": "^3.0.2"
+  }
+}
