@@ -6,7 +6,7 @@
   "scripts": {
     "start": "rimraf ./clones && node lib/index.js",
     "dev": "DEBUG=simple-git npm start",
-    "package": "ncc build lib/index.js -o dist",
+    "package": "ncc build lib/index.js -o dist && rimraf dist/org-projects-dependency-manager",
     "gitAdd": "git add dist/index.js",
     "gen-readme-toc": "markdown-toc -i README.md",
     "lint": "eslint --max-warnings 0 .",

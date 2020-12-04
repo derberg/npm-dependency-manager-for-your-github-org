@@ -11420,6 +11420,11 @@ const { createBranch, clone, push } = __webpack_require__(374);
 const { getReposList, createPr, getRepoDefaultBranch } = __webpack_require__(119);
 const { readPackageJson, parseCommaList, verifyDependencyType, installDependency } = __webpack_require__(918);
 
+/* eslint-disable sonarjs/cognitive-complexity */
+/**
+ * Disabled the rule for this function as there is no way to make it shorter in a meaningfull way.
+ * It looks complex because of extensive usage of core package to log as much as possible
+ */
 async function run() {
   try {
     const gitHubKey = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: true });
@@ -11427,7 +11432,7 @@ async function run() {
     const committerEmail = core.getInput('committer_email') || 'noreply@github.com';
     const commitMessageProd = core.getInput('commit_message_prod') || 'Update dependency';
     const commitMessageDev = core.getInput('commit_message_dev') || 'Update devDependency';
-    const packageJsonPath = process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_loc');
+    const packageJsonPath = process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_loc') || './';
     const reposToIgnore = core.getInput('repos_to_ignore');
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -11436,7 +11441,7 @@ async function run() {
     //by default repo where workflow runs should always be ignored
     ignoredRepositories.push(repo);
 
-    const { name: dependencyName, version: dependencyVersion} = await readPackageJson(__webpack_require__.ab + "org-projects-dependency-manager/" + packageJsonPath || './' + '/package.json');
+    const { name: dependencyName, version: dependencyVersion} = await readPackageJson(__webpack_require__.ab + "org-projects-dependency-manager/" + packageJsonPath + '/package.json');
     core.info(`Identified dependency name as ${dependencyName} with version ${dependencyVersion}. Now it will be bumped in dependent projects.`);
 
     const reposList = await getReposList(octokit, dependencyName, owner);
@@ -11448,7 +11453,7 @@ async function run() {
     for (const {path: filepath, repository: { name, html_url, node_id }} of reposList) {
       if (ignoredRepositories.includes(name)) continue;
 
-      const cloneDir = __webpack_require__.ab + "clones/" + name;
+      const cloneDir = path.join(process.cwd(), './clones', name);
       await mkdir(cloneDir, {recursive: true});
 
       const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
@@ -11465,7 +11470,7 @@ async function run() {
       const packageJson = await readPackageJson(packageJsonLocation);
       const dependencyType = await verifyDependencyType(packageJson, dependencyName);
       if (dependencyType === 'NONE') {
-        core.info(`This is super strange. We could not find ${dependencyName} neither in dependencies property nor in the devDependencies property. This repo should not show up on the list as it should not show up in search results. On to the next one`);
+        core.info(`We could not find ${dependencyName} neither in dependencies property nor in the devDependencies property. No further steps will be performed. It was found as GitHub search is not perfect and you probably use a package with similar name.`);
         continue;
       }
 
@@ -12128,8 +12133,8 @@ function verifyDependencyType(json, dependencyName) {
   const prodDependencies = json.dependencies;
   const devDependencies = json.devDependencies;
 
-  const isProd = prodDependencies[dependencyName];
-  const isDev = devDependencies[dependencyName];
+  const isProd = prodDependencies && prodDependencies[dependencyName];
+  const isDev = devDependencies && devDependencies[dependencyName];
 
   if (isProd && isDev) return 'PROD';
   if (!isProd && !isDev) return 'NONE';

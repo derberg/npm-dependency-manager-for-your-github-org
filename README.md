@@ -15,7 +15,25 @@ GitHub Action that handles automated update of dependencies in package.json betw
 
 ## Why I Created This Action?
 
-//TODO
+GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization.
+
+The main goal was to automate bump of dependencies between packages from the same organization. You might have several projects depending on each other, and your option to efficiently work with them should not only be a monorepo. In my opinion, people reach for monorepo to quickly, letting themselves to solve one complex problem by introducing another one. 
+
+You cannot apply monorepo everywhere, sometimes it doesn't make sense, and you still have some dependencies that you need to bump manually. This action doesn't have such a problem.
+
+## How It Works?
+
+tl;dr To find dependent projects, GitHub Search is utilized.
+
+1. You run this action in package `@myorg/test`
+1. After releasing `@myorg/test`, you want latest version of the package to be bumped in other packages in your organization/user called `myorg`
+1. The following search is performed `"@myorg/test" user:myorg in:file filename:package.json`
+1. Search is not perfect, quotations from `"@myorg/test"` are ignored and result can also contain repositories that have only `@myorg/test-sdk` as dependency
+1. All found repositories are cloned (except of `@myorg/test`)
+1. Action verifies if you really have `@myorg/test` in dependencies or devDependencies
+1. Now the rest, bumping + pushing + creating a pull request
+
+Approach with using GitHub search has only one disadvantage, bumping will not work in forks, as forks do not show up in search results. It is still better than cloning all repositories from your organization.
 
 ## Action Flow
 
@@ -49,10 +67,3 @@ repos_to_ignore | Comma-separated list of repositories that should not get updat
 # PACKAGE_JSON_LOC=test is a path to package.json file against you want to test
 GITHUB_TOKEN=token PACKAGE_JSON_LOC=test GITHUB_REPOSITORY="lukasz-lab/.github" npm start
 ```
-
-## TODO
-
-This action should not be used yet. I need to:
-- write decent amount of tests as this action can do some harm
-- make final clarification of search usage
-- provide examples
