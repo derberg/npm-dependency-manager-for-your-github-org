@@ -11448,7 +11448,7 @@ async function run() {
     const foundReposAmount = reposList.length;
     if (!foundReposAmount) return core.info(`No dependants found. No version bump performed. Looks like you do not use ${dependencyName} in your organization :man_shrugging:`);
 
-    core.startGroup(`Iterating over ${foundReposAmount} from ${owner} that have ${dependencyName} in their package.json.`);
+    core.startGroup(`Iterating over ${foundReposAmount} repos from ${owner} that have ${dependencyName} in their package.json. The following repos will be later ignored: ${ignoredRepositories}`);
 
     for (const {path: filepath, repository: { name, html_url, node_id }} of reposList) {
       if (ignoredRepositories.includes(name)) continue;
