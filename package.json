@@ -1,6 +1,6 @@
 {
   "name": "org-projects-dependency-manager",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "This action handles automated update of dependencies in package.json between projects from the same GitHub organization.",
   "main": "lib/index.js",
   "scripts": {
