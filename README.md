@@ -4,11 +4,11 @@ GitHub Action that handles automated update of dependencies in package.json betw
 <!-- toc -->
 
 - [Why I Created This Action?](#why-i-created-this-action)
+- [How It Works?](#how-it-works)
+- [Tests](#tests)
 - [Action Flow](#action-flow)
 - [Configuration](#configuration)
-- [Examples](#examples)
-  * [Minimum Workflow](#minimum-workflow)
-  * [Advanced Workflow](#advanced-workflow)
+- [Example](#example)
 - [Development](#development)
 
 <!-- tocstop -->
@@ -25,6 +25,8 @@ You cannot apply monorepo everywhere, sometimes it doesn't make sense, and you s
 
 tl;dr To find dependent projects, GitHub Search is utilized.
 
+Before you run this action, I suggest you first use manually the search query used by this action. Go to https://github.com and in search box paste `"@myorg/test" user:myorg in:file filename:package.json` (with proper names of course). Identify repositories that have your package in dependencies, but you do not want to automatically update it. Add it to the list of ignored repositories
+
 1. You run this action in package `@myorg/test`
 1. After releasing `@myorg/test`, you want latest version of the package to be bumped in other packages in your organization/user called `myorg`
 1. The following search is performed `"@myorg/test" user:myorg in:file filename:package.json`
@@ -34,6 +36,10 @@ tl;dr To find dependent projects, GitHub Search is utilized.
 1. Now the rest, bumping + pushing + creating a pull request
 
 Approach with using GitHub search has only one disadvantage, bumping will not work in forks, as forks do not show up in search results. It is still better than cloning all repositories from your organization.
+
+## Tests
+
+I provided only unit tests for essential utils. There are no integration tests as I have no clear idea of how they would look like and prefer to test manually every change for the time being. I have a test organization that I test against all cases and am 100% sure all works as expected. Is it lame? :man_shrugging:. I don't see a point to invest time into more sophisticated automated tests if, at the moment, I'm the only one interested in this GitHub Action. I'm happy to work on this. Just report an issue, and if possible, suggest a solution.
 
 ## Action Flow
 
@@ -51,13 +57,37 @@ commit_message_prod | It is used as a commit message when bumping dependency fro
 commit_message_dev | It is used as a commit message when bumping dependency from "devDependencies" section in package.json. It is also used as a title of the pull request that is created by this action. | false | `Update devDependency`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 
-## Examples
+## Example
 
-//TODO
+Below you can find full example for this GitHub Action used agains **release** webhook. You can also use it in other events. This action doesn't read events, it just runs when triggered. In only needs access to the `package.json` of the repository in which it is running. This means you can integrate it with other workflows, like your release workflow.
 
-### Minimum Workflow
+```yml
+name: Bump package version in dependent repos
 
-### Advanced Workflow
+on:
+  release:
+    types:
+      - published
+
+jobs:
+
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bumping
+        uses: derberg/org-projects-dependency-manager@v1
+        with:
+          github_token: ${{ secrets.CUSTOM_TOKEN }}
+          repos_to_ignore: repo1,repo2
+          packagejson_path: ./custom/path
+          committer_username: pomidor
+          committer_email: pomidor@pomidor.com
+          #This is commit message and PR title for repos where this package is in dependencies
+          commit_message_prod: "fix: update internal production dependencies"
+          #This is commit message and PR title for repos where this package is in devDependencies
+          commit_message_dev: "chore: update internal development dependencies"
+```
 
 ## Development
 
