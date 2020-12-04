@@ -11441,7 +11441,7 @@ async function run() {
     //by default repo where workflow runs should always be ignored
     ignoredRepositories.push(repo);
 
-    const { name: dependencyName, version: dependencyVersion} = await readPackageJson(__webpack_require__.ab + "org-projects-dependency-manager/" + packageJsonPath + '/package.json');
+    const { name: dependencyName, version: dependencyVersion} = await readPackageJson(path.join(packageJsonPath, 'package.json'));
     core.info(`Identified dependency name as ${dependencyName} with version ${dependencyVersion}. Now it will be bumped in dependent projects.`);
 
     const reposList = await getReposList(octokit, dependencyName, owner);
