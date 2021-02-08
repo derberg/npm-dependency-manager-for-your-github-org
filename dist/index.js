@@ -11452,8 +11452,14 @@ async function run() {
 
     for (const {path: filepath, repository: { name, html_url, node_id }} of reposList) {
       if (ignoredRepositories.includes(name)) continue;
+      //Sometimes there might be files like package.json.js or similar as the repository might contain some templated package.json files that cannot be parsed from string to JSON
+      //Such files must be ignored 
+      if (filepath.substring(filepath.lastIndexOf('/') + 1) !== 'package.json') {
+        core.info(`Ignoring ${filepath} from ${name} repo as only package.json files are supported`);
+        continue;
+      }
 
-      const cloneDir = path.join(process.cwd(), './clones', name);
+      const cloneDir = __webpack_require__.ab + "clones/" + name;
       await mkdir(cloneDir, {recursive: true});
 
       const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
@@ -12111,9 +12117,19 @@ module.exports = { readPackageJson, parseCommaList, verifyDependencyType, instal
  * @returns parsed package.json
  */
 async function readPackageJson(path) {
-  return JSON.parse(
-    await readFile(path, 'utf8')
-  );
+  let packageFile, parsedFile;
+
+  try {
+    packageFile = await readFile(path, 'utf8');
+  } catch (e) {
+    throw new Error(`There was a problem reading the package.json file from ${path}`, e);
+  }
+  try {
+    parsedFile = JSON.parse(packageFile);
+  } catch (e) {
+    throw new Error(`There was a problem parsing the package.json file from ${path} with the following content: ${packageFile}`);
+  }
+  return parsedFile;
 }
 
 /**
