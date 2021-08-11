@@ -1,5 +1,5 @@
-name: Organization Projects' Dependency Manager
-description: This action handles automated update of dependencies in package.json between projects from the same GitHub organization. 
+name: Custom Dependabot For Your GitHub Organization
+description: This action handles automated update of dependencies in package.json between projects from the same GitHub organization. You run this workflow after npm package release. It searches for libraries in your GitHub organization that depend on this package and bump version through a PR flow.
 inputs:
   github_token:
     description: >
@@ -24,13 +24,13 @@ inputs:
       It is used as a commit message when bumping dependency from "dependencies" section in package.json. 
       In case dependency is located in both dependencies and devDependencies of dependant, then prod commit message is used.
       It is also used as a title of the pull request that is created by this action.
-    default: Update dependency
+    default: 'fix: update ${dependencyName} to ${dependencyVersion} version'
     required: false
   commit_message_dev:
     description: >
       It is used as a commit message when bumping dependency from "devDependencies" section in package.json. 
       It is also used as a title of the pull request that is created by this action.
-    default: Update devDependency
+    default: 'chore: update ${dependencyName} to ${dependencyVersion} version'
     required: false
   packagejson_path:
     description: >
