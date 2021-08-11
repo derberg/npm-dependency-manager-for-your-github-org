@@ -1,5 +1,5 @@
 # Organization Projects' Dependency Manager
-GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization.
+GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization. You run this workflow after npm package release. It searches for libraries in your GitHub organization that depend on this package and bump version through a PR flow.
 
 <!-- toc -->
 
