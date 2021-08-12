@@ -24,13 +24,11 @@ inputs:
       It is used as a commit message when bumping dependency from "dependencies" section in package.json. 
       In case dependency is located in both dependencies and devDependencies of dependant, then prod commit message is used.
       It is also used as a title of the pull request that is created by this action.
-    default: 'fix: update ${dependencyName} to ${dependencyVersion} version'
     required: false
   commit_message_dev:
     description: >
       It is used as a commit message when bumping dependency from "devDependencies" section in package.json. 
       It is also used as a title of the pull request that is created by this action.
-    default: 'chore: update ${dependencyName} to ${dependencyVersion} version'
     required: false
   packagejson_path:
     description: >
