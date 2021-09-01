@@ -1,6 +1,6 @@
 {
-  "name": "custom-dependabot-for-your-github-org",
-  "version": "2.0.0",
+  "name": "npm-dependency-manager-for-your-github-org",
+  "version": "3.0.0",
   "description": "This action handles automated update of dependencies in package.json between projects from the same GitHub organization.",
   "main": "lib/index.js",
   "scripts": {

@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Bumping
-        uses: derberg/custom-dependabot-for-your-github-org@v2
+        uses: derberg/npm-dependency-manager-for-your-github-org@v3
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           repos_to_ignore: repo1,repo2

@@ -1,4 +1,4 @@
-name: Custom Dependabot For Your GitHub Organization
+name: NPM Dependency Manager For Your GitHub Organization
 description: This action handles automated update of dependencies in package.json between projects from the same GitHub organization.
 inputs:
   github_token:
