@@ -1826,8 +1826,12 @@ async function getReposList(octokit, name, owner) {
   const { data: { items } } = await octokit.search.code({
     q: `"${name}" user:${owner} in:file filename:package.json`
   });
+  
+  let processedRepo = {};
+  // filter() returns only the repos that are not present in processedRepo object, and adds them there to the list
+  const deduplicatedReposList = items.filter(({ repository: { id }}) => !processedRepo[id] && (processedRepo[id] = true));
 
-  return items;
+  return deduplicatedReposList;
 }
 
 async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
@@ -1866,6 +1870,7 @@ async function getRepoDefaultBranch(octokit, repo, owner) {
 
   return default_branch;
 }
+
 
 /***/ }),
 
@@ -11444,6 +11449,9 @@ async function run() {
     ignoredRepositories.push(repo);
 
     const reposList = await getReposList(octokit, dependencyName, owner);
+    core.debug('DEBUG: List of all repost returned by search without duplicates:');
+    core.debug(JSON.stringify(reposList, null, 2));
+    
     const foundReposAmount = reposList.length;
     if (!foundReposAmount) return core.info(`No dependants found. No version bump performed. Looks like you do not use ${dependencyName} in your organization :man_shrugging:`);
 

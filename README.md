@@ -10,6 +10,7 @@ GitHub Action that handles automated update of dependencies in package.json betw
 - [Configuration](#configuration)
 - [Example](#example)
 - [Development](#development)
+- [Debug](#debug)
 
 <!-- tocstop -->
 
@@ -97,3 +98,7 @@ jobs:
 # PACKAGE_JSON_LOC=test is a path to package.json file against you want to test
 GITHUB_TOKEN=token PACKAGE_JSON_LOC=test GITHUB_REPOSITORY="lukasz-lab/.github" npm start
 ```
+
+## Debug
+
+In case something ain't right, the action doesn't work as expected, enable debugging. Add to **Secrets** of the repository a secret called `ACTIONS_STEP_DEBUG` with value `true`. Now, once you run the action again, there will be additional logs visible that start with `DEBUG: `.
