@@ -1,6 +1,8 @@
 # Organization Projects' Dependency Manager
 GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization. You run this workflow after npm package release. It searches for libraries in your GitHub organization that depend on this package and bump version through a PR flow.
 
+While updating multiple repositories, if there are issues with one of them, the action doesn't fail but continues bumping deps in next repo from the list. 
+
 <!-- toc -->
 
 - [Why I Created This Action?](#why-i-created-this-action)
@@ -57,6 +59,7 @@ committer_email | The committer's email that will be used in the commit of chang
 commit_message_prod | It is used as a commit message when bumping dependency from "dependencies" section in package.json. In case dependency is located in both dependencies and devDependencies of dependant, then prod commit message is used. It is also used as a title of the pull request that is created by this action. | false | `fix: update ${dependencyName} to ${dependencyVersion} version`
 commit_message_dev | It is used as a commit message when bumping dependency from "devDependencies" section in package.json. It is also used as a title of the pull request that is created by this action. | false | `chore: update ${dependencyName} to ${dependencyVersion} version`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
+base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. If not provided, default branch is used. In the format: `next-major`. | false | -
 
 ## Example
 
@@ -77,10 +80,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Bumping
-        uses: derberg/npm-dependency-manager-for-your-github-org@v3
+        uses: derberg/npm-dependency-manager-for-your-github-org@v4
         with:
           github_token: ${{ secrets.CUSTOM_TOKEN }}
           repos_to_ignore: repo1,repo2
+          base_branch: next-major
           packagejson_path: ./custom/path
           committer_username: pomidor
           committer_email: pomidor@pomidor.com
