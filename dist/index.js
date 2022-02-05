@@ -5665,7 +5665,7 @@ async function createBranch(branchName, git) {
 
 async function checkout(branchName, git) {
   return await git
-    .fetch(remoteName, branchName)
+    .fetch('origin', branchName)
     .checkout(branchName);
 }
 
