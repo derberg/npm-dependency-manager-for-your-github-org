@@ -5654,11 +5654,16 @@ exports.parseStringResponse = parseStringResponse;
 /***/ 374:
 /***/ (function(module) {
 
-module.exports = {createBranch, clone, push, removeRemoteBranch};
+module.exports = {createBranch, clone, push, removeRemoteBranch, checkout};
 
 async function createBranch(branchName, git) {
   return await git
     .checkout(`-b${branchName}`);
+}
+
+async function checkout(branchName, git) {
+  return await git
+    .checkout(branchName);
 }
 
 async function clone(remote, dir, git) {
@@ -11425,7 +11430,7 @@ const simpleGit = __webpack_require__(477);
 const path = __webpack_require__(622);
 const {mkdir} = __webpack_require__(747).promises;
 
-const { createBranch, clone, push, removeRemoteBranch } = __webpack_require__(374);
+const { createBranch, clone, push, removeRemoteBranch, checkout } = __webpack_require__(374);
 const { getReposList, createPr, getRepoDefaultBranch } = __webpack_require__(119);
 const { readPackageJson, parseCommaList, verifyDependencyType, installDependency } = __webpack_require__(918);
 
@@ -11475,6 +11480,8 @@ async function run() {
       continue;
     }
 
+    const baseBranchWhereApplyChanges = baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
+
     const cloneDir = __webpack_require__.ab + "clones/" + name;
     try {
       await mkdir(cloneDir, {recursive: true});
@@ -11488,11 +11495,12 @@ async function run() {
     core.info(`Clonning ${name}.`);
     try {
       await clone(html_url, cloneDir, git);
+      if (baseBranchName) await checkout(baseBranchWhereApplyChanges);
     } catch (error) {
       core.warning(`Cloning failed: ${ error}`);
       continue;
     }
-      
+
     core.info(`Creating branch ${branchName}.`);
     try {
       await createBranch(branchName, git);
@@ -11536,7 +11544,6 @@ async function run() {
     }
       
     let pullRequestUrl;
-    const baseBranchWhereApplyChanges = baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
     core.info('Creating PR');
     try {
       pullRequestUrl = await createPr(octokit, branchName, node_id, commitMessage, baseBranchWhereApplyChanges);
