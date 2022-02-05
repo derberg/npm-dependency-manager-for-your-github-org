@@ -5654,7 +5654,7 @@ exports.parseStringResponse = parseStringResponse;
 /***/ 374:
 /***/ (function(module) {
 
-module.exports = {createBranch, clone, push, removeRemoteBranch, checkout};
+module.exports = {createBranch, clone, push, removeRemoteBranch};
 
 const remoteName = 'auth';
 
@@ -5663,15 +5663,9 @@ async function createBranch(branchName, git) {
     .checkout(`-b${branchName}`);
 }
 
-async function checkout(branchName, git) {
+async function clone(remote, dir, branchName, git) {
   return await git
-    .fetch('origin', branchName)
-    .checkout(branchName);
-}
-
-async function clone(remote, dir, git) {
-  return await git
-    .clone(remote, dir, {'--depth': 1});
+    .clone(remote, dir, {'--depth': 1, '--branch': branchName});
 }
 
 async function push(token, url, branchName, message, committerUsername, committerEmail, git) {
@@ -11433,7 +11427,7 @@ const simpleGit = __webpack_require__(477);
 const path = __webpack_require__(622);
 const {mkdir} = __webpack_require__(747).promises;
 
-const { createBranch, clone, push, removeRemoteBranch, checkout } = __webpack_require__(374);
+const { createBranch, clone, push, removeRemoteBranch } = __webpack_require__(374);
 const { getReposList, createPr, getRepoDefaultBranch } = __webpack_require__(119);
 const { readPackageJson, parseCommaList, verifyDependencyType, installDependency } = __webpack_require__(918);
 
@@ -11484,26 +11478,19 @@ async function run() {
     }
 
     const baseBranchWhereApplyChanges = baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
-
+    const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
     const cloneDir = __webpack_require__.ab + "clones/" + name;
+    const git = simpleGit({baseDir: cloneDir});
+
     try {
       await mkdir(cloneDir, {recursive: true});
     } catch (error) {
       core.warning(`Unable to create directory where close should end up: ${ error}`);
     }
 
-    const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
-    const git = simpleGit({baseDir: cloneDir});
-
-    core.info(`Clonning ${name}.`);
+    core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges}.`);
     try {
-      await clone(html_url, cloneDir, git);
-      //in case some different than default branch was provided in config
-      //after clonning repo, we need to checkout this specific branch
-      if (baseBranchName) {
-        core.info(`Checking out branch ${baseBranchWhereApplyChanges}.`);
-        await checkout(baseBranchWhereApplyChanges, git);
-      }
+      await clone(html_url, cloneDir, baseBranchWhereApplyChanges, git);
     } catch (error) {
       core.warning(`Cloning failed: ${ error}`);
       continue;
