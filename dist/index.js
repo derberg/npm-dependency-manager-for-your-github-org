@@ -5656,6 +5656,8 @@ exports.parseStringResponse = parseStringResponse;
 
 module.exports = {createBranch, clone, push, removeRemoteBranch, checkout};
 
+const remoteName = 'auth';
+
 async function createBranch(branchName, git) {
   return await git
     .checkout(`-b${branchName}`);
@@ -5682,12 +5684,13 @@ async function push(token, url, branchName, message, committerUsername, committe
     .addConfig('user.name', committerUsername)
     .addConfig('user.email', committerEmail)
     .commit(message)
-    .addRemote('auth', authanticatedUrl(token, url, committerUsername))
-    .push(['-u', 'auth', branchName]);
+    .addRemote(remoteName, authanticatedUrl(token, url, committerUsername))
+    .fetch()
+    .push(['-u', remoteName, branchName]);
 }
 
 async function removeRemoteBranch(branchName, git) {
-  return await git.push(['-u', 'auth', branchName, '--delete', '--force']);
+  return await git.push(['-u', remoteName, branchName, '--delete', '--force']);
 }
   
 
