@@ -11495,7 +11495,12 @@ async function run() {
     core.info(`Clonning ${name}.`);
     try {
       await clone(html_url, cloneDir, git);
-      if (baseBranchName) await checkout(baseBranchWhereApplyChanges);
+      //in case some different than default branch was provided in config
+      //after clonning repo, we need to checkout this specific branch
+      if (baseBranchName) {
+        core.info(`Checking out branch ${baseBranchWhereApplyChanges}.`);
+        await checkout(baseBranchWhereApplyChanges);
+      }
     } catch (error) {
       core.warning(`Cloning failed: ${ error}`);
       continue;

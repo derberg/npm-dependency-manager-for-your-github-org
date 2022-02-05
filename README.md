@@ -59,7 +59,7 @@ committer_email | The committer's email that will be used in the commit of chang
 commit_message_prod | It is used as a commit message when bumping dependency from "dependencies" section in package.json. In case dependency is located in both dependencies and devDependencies of dependant, then prod commit message is used. It is also used as a title of the pull request that is created by this action. | false | `fix: update ${dependencyName} to ${dependencyVersion} version`
 commit_message_dev | It is used as a commit message when bumping dependency from "devDependencies" section in package.json. It is also used as a title of the pull request that is created by this action. | false | `chore: update ${dependencyName} to ${dependencyVersion} version`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
-base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. If not provided, default branch is used. In the format: `next-major`. | false | -
+base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. Branch where changes are introduced is cut from this base branch. If not provided, default branch is used. In the format: `next-major`. | false | -
 
 ## Example
 
