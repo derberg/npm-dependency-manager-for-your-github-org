@@ -11480,7 +11480,6 @@ async function run() {
     const baseBranchWhereApplyChanges = baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
     const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
     const cloneDir = __webpack_require__.ab + "clones/" + name;
-    const git = simpleGit({baseDir: cloneDir});
 
     try {
       await mkdir(cloneDir, {recursive: true});
@@ -11488,6 +11487,8 @@ async function run() {
       core.warning(`Unable to create directory where close should end up: ${ error}`);
     }
 
+    const git = simpleGit({baseDir: cloneDir});
+    
     core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges}.`);
     try {
       await clone(html_url, cloneDir, baseBranchWhereApplyChanges, git);
