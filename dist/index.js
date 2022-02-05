@@ -5665,6 +5665,7 @@ async function createBranch(branchName, git) {
 
 async function checkout(branchName, git) {
   return await git
+    .fetch(remoteName, branchName)
     .checkout(branchName);
 }
 
@@ -5685,7 +5686,6 @@ async function push(token, url, branchName, message, committerUsername, committe
     .addConfig('user.email', committerEmail)
     .commit(message)
     .addRemote(remoteName, authanticatedUrl(token, url, committerUsername))
-    .fetch()
     .push(['-u', remoteName, branchName]);
 }
 
