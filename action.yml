@@ -41,6 +41,11 @@ inputs:
       Action already ignores the repo in which the action is triggered so you do not need to add it explicitly.
       In the format: `repo1,repo2`.
     required: false
+  base_branch:
+    description: >
+      Name of the base branch, where changes in package.json must be applied. It is used in PR creation. If not provided, default branch is used
+      In the format: `next-major`.
+    required: false
 runs:
   using: node12
   main: dist/index.js
