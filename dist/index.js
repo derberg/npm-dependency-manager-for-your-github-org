@@ -1827,16 +1827,14 @@ async function getReposList(octokit, name, owner) {
     q: `"${name}" user:${owner} in:file filename:package.json`
   });
   
-  let processedRepo = {};
+  const processedRepo = {};
   // filter() returns only the repos that are not present in processedRepo object, and adds them there to the list
-  const deduplicatedReposList = items.filter(({ repository: { id }}) => !processedRepo[id] && (processedRepo[id] = true));
-
-  return deduplicatedReposList;
+  return items.filter(({ repository: { id }}) => !processedRepo[id] && (processedRepo[id] = true));
 }
 
 async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
   const createPrMutation =
-    `mutation createPr($branchName: String!, $id: String!, $commitMessage: String!, $defaultBranch: String!) {
+    `mutation createPr($branchName: String!, $id: ID!, $commitMessage: String!, $defaultBranch: String!) {
       createPullRequest(input: {
         baseRefName: $defaultBranch,
         headRefName: $branchName,
