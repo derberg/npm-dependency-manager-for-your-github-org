@@ -1837,6 +1837,8 @@ async function getReposList(octokit, name, owner) {
     } else {
       acc[index].paths.push(path);
     }
+
+    return acc;
   }, []);
 }
 
