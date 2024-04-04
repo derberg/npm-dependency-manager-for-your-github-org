@@ -1818,7 +1818,9 @@ module.exports = {
 /***/ }),
 
 /***/ 119:
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
+
+const core = __webpack_require__(186);
 
 module.exports = { getReposList, createPr, getRepoDefaultBranch, getExistingPr };
 
@@ -1888,10 +1890,11 @@ async function getExistingPr(octokit, repo, owner, customId) {
     q: `${customId} repo:${owner}/${repo} type:pr is:open`,
   });
   
-  if (!items) return null;
+  if (!items || items.length === 0) return null;
 
   //in case due to sume random issue there are more than on bot PRs, we just pick first from list
   const firstPR = items[0];
+  core.info('PR content', firstPR);
 
   const pullInfo = await octokit.pulls.get({
     owner,
