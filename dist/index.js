@@ -11512,7 +11512,7 @@ async function run() {
     // if customId was provided it means we should not create a new PR right away but first check if maybe there is an existing one we can just update
     if (customId) {
       //if we get branch name instead of null then it means later we will skip branch creation and pr creation but operate on existing branch
-      existingBranchName = getExistingPr(octokit, name, owner, prIdentifierComment(customId));
+      existingBranchName = await getExistingPr(octokit, name, owner, prIdentifierComment(customId));
     }
 
     const baseBranchWhereApplyChanges = existingBranchName || baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
