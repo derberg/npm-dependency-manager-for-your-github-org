@@ -11533,7 +11533,7 @@ async function run() {
 
     const git = simpleGit({baseDir: cloneDir});
     
-    core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges}.`);
+    core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges} from ${html_url}.`);
     try {
       await clone(html_url, cloneDir, baseBranchWhereApplyChanges, git);
     } catch (error) {
@@ -11593,7 +11593,7 @@ async function run() {
 
     const commitMessage = repoDependencyType === 'PROD' ? commitMessageProd : commitMessageDev;
 
-    core.info('Pushing changes to remote');
+    core.info(`Pushing changes to remote to brach ${branchName} located in ${html_url}.`);
     try {
       await push(gitHubKey, html_url, branchName, commitMessage, committerUsername, committerEmail, git);
     } catch (error) {
