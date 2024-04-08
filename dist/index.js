@@ -1894,8 +1894,10 @@ async function getExistingPr(octokit, repo, owner, customId) {
 
   //in case due to sume random issue there are more than on bot PRs, we just pick first from list
   const firstPR = items[0];
-  core.info('PR content', firstPR);
-
+  core.info('Found PRs:', items);
+  core.info(JSON.stringify(items, null, 2));
+  core.info('PR that bot operates on:', firstPR);
+  core.info(JSON.stringify(firstPR, null, 2));
   const pullInfo = await octokit.pulls.get({
     owner,
     repo,
@@ -11618,9 +11620,11 @@ async function run() {
         }
         continue;
       }
+
+      core.info(`Finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+    } else {
+      core.info(`Finished with success and new changes pushed to existing remote branch called ${existingBranchName}`);
     }
-      
-    core.info(`Finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
   }
 
   core.endGroup();
