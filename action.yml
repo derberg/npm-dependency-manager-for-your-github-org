@@ -1,6 +1,11 @@
 name: NPM Dependency Manager For Your GitHub Organization
 description: This action handles automated update of dependencies in package.json between projects from the same GitHub organization.
 inputs:
+  custom_id:
+    description: >
+      This custom_id is added as a unique identifier value to the PR created by the bot so the bot can later recognize it as created by the bot, so it updates existing PR instead creating new one.
+      If custom_id is not specified, action assumes that you still want bot to create multiple PRs in one repo, with multiple updates. Once you add the custom_id, you enable flow with active one PR per repo.
+    required: false
   github_token:
     description: >
       Token to use GitHub API. It must have "repo" scopes so it can push to repos.

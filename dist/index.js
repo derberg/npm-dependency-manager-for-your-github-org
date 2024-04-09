@@ -1818,9 +1818,11 @@ module.exports = {
 /***/ }),
 
 /***/ 119:
-/***/ (function(module) {
+/***/ (function(module, __unusedexports, __webpack_require__) {
 
-module.exports = { getReposList, createPr, getRepoDefaultBranch };
+const core = __webpack_require__(186);
+
+module.exports = { getReposList, createPr, getRepoDefaultBranch, getExistingPr };
 
 async function getReposList(octokit, name, owner) {
   const { data: { items } } = await octokit.search.code({
@@ -1842,14 +1844,15 @@ async function getReposList(octokit, name, owner) {
   }, []);
 }
 
-async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
+async function createPr(octokit, branchName, id, commitMessage, defaultBranch, body = '') {
   const createPrMutation =
-    `mutation createPr($branchName: String!, $id: ID!, $commitMessage: String!, $defaultBranch: String!) {
+    `mutation createPr($branchName: String!, $id: ID!, $commitMessage: String!, $defaultBranch: String!, $body: String!) {
       createPullRequest(input: {
         baseRefName: $defaultBranch,
         headRefName: $branchName,
         title: $commitMessage,
-        repositoryId: $id
+        repositoryId: $id,
+        body: $body
       }){
         pullRequest {
           url
@@ -1862,7 +1865,8 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch) {
     branchName,
     id,
     commitMessage,
-    defaultBranch
+    defaultBranch,
+    body
   };
 
   const { createPullRequest: { pullRequest: { url: pullRequestUrl } } } = await octokit.graphql(createPrMutation, newPrVariables);
@@ -1879,6 +1883,30 @@ async function getRepoDefaultBranch(octokit, repo, owner) {
   return default_branch;
 }
 
+//it either return null which means that there are no existing open PRs 
+//or the name of the branch of existing PR to checkout
+async function getExistingPr(octokit, repo, owner, customId) {
+  const { data: { items } } = await octokit.search.issuesAndPullRequests({
+    q: `${customId} repo:${owner}/${repo} type:pr is:open`,
+  });
+  
+  if (!items || items.length === 0) return null;
+
+  //in case due to sume random issue there are more than on bot PRs, we just pick first from list
+  const firstPR = items[0];
+  core.info('Found PRs:');
+  core.info(JSON.stringify(items, null, 2));
+  core.info('PR that bot operates on:');
+  core.info(JSON.stringify(firstPR, null, 2));
+  const pullInfo = await octokit.pulls.get({
+    owner,
+    repo,
+    pull_number: firstPR.number,
+  });
+  core.info('More details about the PR:');
+  core.info(JSON.stringify(pullInfo.data, null, 2));
+  return pullInfo.data.head.ref;
+}
 
 /***/ }),
 
@@ -9187,51 +9215,51 @@ exports.trailingFunctionArgument = trailingFunctionArgument;
 /***/ 549:
 /***/ (function(module) {
 
-module.exports = addHook
+module.exports = addHook;
 
-function addHook (state, kind, name, hook) {
-  var orig = hook
+function addHook(state, kind, name, hook) {
+  var orig = hook;
   if (!state.registry[name]) {
-    state.registry[name] = []
+    state.registry[name] = [];
   }
 
-  if (kind === 'before') {
+  if (kind === "before") {
     hook = function (method, options) {
       return Promise.resolve()
         .then(orig.bind(null, options))
-        .then(method.bind(null, options))
-    }
+        .then(method.bind(null, options));
+    };
   }
 
-  if (kind === 'after') {
+  if (kind === "after") {
     hook = function (method, options) {
-      var result
+      var result;
       return Promise.resolve()
         .then(method.bind(null, options))
         .then(function (result_) {
-          result = result_
-          return orig(result, options)
+          result = result_;
+          return orig(result, options);
         })
         .then(function () {
-          return result
-        })
-    }
+          return result;
+        });
+    };
   }
 
-  if (kind === 'error') {
+  if (kind === "error") {
     hook = function (method, options) {
       return Promise.resolve()
         .then(method.bind(null, options))
         .catch(function (error) {
-          return orig(error, options)
-        })
-    }
+          return orig(error, options);
+        });
+    };
   }
 
   state.registry[name].push({
     hook: hook,
-    orig: orig
-  })
+    orig: orig,
+  });
 }
 
 
@@ -10028,33 +10056,32 @@ module.exports = require("util");
 /***/ 670:
 /***/ (function(module) {
 
-module.exports = register
+module.exports = register;
 
-function register (state, name, method, options) {
-  if (typeof method !== 'function') {
-    throw new Error('method for before hook must be a function')
+function register(state, name, method, options) {
+  if (typeof method !== "function") {
+    throw new Error("method for before hook must be a function");
   }
 
   if (!options) {
-    options = {}
+    options = {};
   }
 
   if (Array.isArray(name)) {
     return name.reverse().reduce(function (callback, name) {
-      return register.bind(null, state, name, callback, options)
-    }, method)()
+      return register.bind(null, state, name, callback, options);
+    }, method)();
   }
 
-  return Promise.resolve()
-    .then(function () {
-      if (!state.registry[name]) {
-        return method(options)
-      }
+  return Promise.resolve().then(function () {
+    if (!state.registry[name]) {
+      return method(options);
+    }
 
-      return (state.registry[name]).reduce(function (method, registered) {
-        return registered.hook.bind(null, method, options)
-      }, method)()
-    })
+    return state.registry[name].reduce(function (method, registered) {
+      return registered.hook.bind(null, method, options);
+    }, method)();
+  });
 }
 
 
@@ -10134,63 +10161,67 @@ TasksPendingQueue.counter = 0;
 /***/ 682:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
-var register = __webpack_require__(670)
-var addHook = __webpack_require__(549)
-var removeHook = __webpack_require__(819)
+var register = __webpack_require__(670);
+var addHook = __webpack_require__(549);
+var removeHook = __webpack_require__(819);
 
 // bind with array of arguments: https://stackoverflow.com/a/21792913
-var bind = Function.bind
-var bindable = bind.bind(bind)
+var bind = Function.bind;
+var bindable = bind.bind(bind);
 
-function bindApi (hook, state, name) {
-  var removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state])
-  hook.api = { remove: removeHookRef }
-  hook.remove = removeHookRef
-
-  ;['before', 'error', 'after', 'wrap'].forEach(function (kind) {
-    var args = name ? [state, kind, name] : [state, kind]
-    hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args)
-  })
+function bindApi(hook, state, name) {
+  var removeHookRef = bindable(removeHook, null).apply(
+    null,
+    name ? [state, name] : [state]
+  );
+  hook.api = { remove: removeHookRef };
+  hook.remove = removeHookRef;
+  ["before", "error", "after", "wrap"].forEach(function (kind) {
+    var args = name ? [state, kind, name] : [state, kind];
+    hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
+  });
 }
 
-function HookSingular () {
-  var singularHookName = 'h'
+function HookSingular() {
+  var singularHookName = "h";
   var singularHookState = {
-    registry: {}
-  }
-  var singularHook = register.bind(null, singularHookState, singularHookName)
-  bindApi(singularHook, singularHookState, singularHookName)
-  return singularHook
+    registry: {},
+  };
+  var singularHook = register.bind(null, singularHookState, singularHookName);
+  bindApi(singularHook, singularHookState, singularHookName);
+  return singularHook;
 }
 
-function HookCollection () {
+function HookCollection() {
   var state = {
-    registry: {}
-  }
+    registry: {},
+  };
 
-  var hook = register.bind(null, state)
-  bindApi(hook, state)
+  var hook = register.bind(null, state);
+  bindApi(hook, state);
 
-  return hook
+  return hook;
 }
 
-var collectionHookDeprecationMessageDisplayed = false
-function Hook () {
+var collectionHookDeprecationMessageDisplayed = false;
+function Hook() {
   if (!collectionHookDeprecationMessageDisplayed) {
-    console.warn('[before-after-hook]: "Hook()" repurposing warning, use "Hook.Collection()". Read more: https://git.io/upgrade-before-after-hook-to-1.4')
-    collectionHookDeprecationMessageDisplayed = true
+    console.warn(
+      '[before-after-hook]: "Hook()" repurposing warning, use "Hook.Collection()". Read more: https://git.io/upgrade-before-after-hook-to-1.4'
+    );
+    collectionHookDeprecationMessageDisplayed = true;
   }
-  return HookCollection()
+  return HookCollection();
 }
 
-Hook.Singular = HookSingular.bind()
-Hook.Collection = HookCollection.bind()
+Hook.Singular = HookSingular.bind();
+Hook.Collection = HookCollection.bind();
 
-module.exports = Hook
+module.exports = Hook;
 // expose constructors as a named property for TypeScript
-module.exports.Hook = Hook
-module.exports.Singular = Hook.Singular
-module.exports.Collection = Hook.Collection
+module.exports.Hook = Hook;
+module.exports.Singular = Hook.Singular;
+module.exports.Collection = Hook.Collection;
 
 
 /***/ }),
@@ -11363,22 +11394,24 @@ exports.isEmptyTask = isEmptyTask;
 /***/ 819:
 /***/ (function(module) {
 
-module.exports = removeHook
+module.exports = removeHook;
 
-function removeHook (state, name, method) {
+function removeHook(state, name, method) {
   if (!state.registry[name]) {
-    return
+    return;
   }
 
   var index = state.registry[name]
-    .map(function (registered) { return registered.orig })
-    .indexOf(method)
+    .map(function (registered) {
+      return registered.orig;
+    })
+    .indexOf(method);
 
   if (index === -1) {
-    return
+    return;
   }
 
-  state.registry[name].splice(index, 1)
+  state.registry[name].splice(index, 1);
 }
 
 
@@ -11436,8 +11469,8 @@ const path = __webpack_require__(622);
 const {mkdir} = __webpack_require__(747).promises;
 
 const { createBranch, clone, push, removeRemoteBranch } = __webpack_require__(374);
-const { getReposList, createPr, getRepoDefaultBranch } = __webpack_require__(119);
-const { readPackageJson, parseCommaList, verifyDependencyType, installDependency } = __webpack_require__(918);
+const { getReposList, createPr, getRepoDefaultBranch, getExistingPr } = __webpack_require__(119);
+const { readPackageJson, parseCommaList, verifyDependencyType, installDependency, prIdentifierComment } = __webpack_require__(918);
 
 /* eslint-disable sonarjs/cognitive-complexity */
 /**
@@ -11451,10 +11484,11 @@ async function run() {
   const packageJsonPath = process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_path') || './';
   const { name: dependencyName, version: dependencyVersion} = await readPackageJson(path.join(packageJsonPath, 'package.json'));
   core.info(`Identified dependency name as ${dependencyName} with version ${dependencyVersion}. Now it will be bumped in dependent projects.`);
-  const commitMessageProd = core.getInput('commit_message_prod') || `fix: update ${dependencyName} to ${dependencyVersion} version`;
-  const commitMessageDev = core.getInput('commit_message_dev') || `chore: update ${dependencyName} to ${dependencyVersion} version`;
+  const commitMessageProd = core.getInput('commit_message_prod') || `fix: update ${dependencyName} to ${dependencyVersion} version and others`;
+  const commitMessageDev = core.getInput('commit_message_dev') || `chore: update ${dependencyName} to ${dependencyVersion} version and others`;
   const reposToIgnore = core.getInput('repos_to_ignore');
   const baseBranchName = core.getInput('base_branch');
+  const customId = core.getInput('custom_id') || false;
 
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const octokit = github.getOctokit(gitHubKey);
@@ -11480,9 +11514,16 @@ async function run() {
   for (const {paths: filepaths, repository: { name, html_url, node_id }} of reposList) {
     if (ignoredRepositories.includes(name)) continue;
 
-    const baseBranchWhereApplyChanges = baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
-    const branchName = `bot/bump-${dependencyName}-${dependencyVersion}`;
-    const cloneDir = path.join(process.cwd(), './clones', name);
+    let existingBranchName = null;
+    // if customId was provided it means we should not create a new PR right away but first check if maybe there is an existing one we can just update
+    if (customId) {
+      //if we get branch name instead of null then it means later we will skip branch creation and pr creation but operate on existing branch
+      existingBranchName = await getExistingPr(octokit, name, owner, prIdentifierComment(customId));
+    }
+
+    const baseBranchWhereApplyChanges = existingBranchName || baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
+    const branchName = existingBranchName || `bot/bump-${dependencyName}-${dependencyVersion}`;
+    const cloneDir = __webpack_require__.ab + "clones/" + name;
 
     try {
       await mkdir(cloneDir, {recursive: true});
@@ -11492,7 +11533,7 @@ async function run() {
 
     const git = simpleGit({baseDir: cloneDir});
     
-    core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges}.`);
+    core.info(`Clonning ${name} with branch ${baseBranchWhereApplyChanges} from ${html_url}.`);
     try {
       await clone(html_url, cloneDir, baseBranchWhereApplyChanges, git);
     } catch (error) {
@@ -11500,12 +11541,14 @@ async function run() {
       continue;
     }
 
-    core.info(`Creating branch ${branchName}.`);
-    try {
-      await createBranch(branchName, git);
-    } catch (error) {
-      core.warning(`Branch creation failes: ${ error}`);
-      continue;
+    if (!existingBranchName) {
+      core.info(`Creating branch ${branchName}.`);
+      try {
+        await createBranch(branchName, git);
+      } catch (error) {
+        core.warning(`Branch creation failes: ${ error}`);
+        continue;
+      }
     }
 
     let repoDependencyType;
@@ -11550,7 +11593,7 @@ async function run() {
 
     const commitMessage = repoDependencyType === 'PROD' ? commitMessageProd : commitMessageDev;
 
-    core.info('Pushing changes to remote');
+    core.info(`Pushing changes to remote to brach ${branchName} located in ${html_url}.`);
     try {
       await push(gitHubKey, html_url, branchName, commitMessage, committerUsername, committerEmail, git);
     } catch (error) {
@@ -11559,22 +11602,30 @@ async function run() {
     }
     
     let pullRequestUrl;
-    core.info('Creating PR');
-    try {
-      pullRequestUrl = await createPr(octokit, branchName, node_id, commitMessage, baseBranchWhereApplyChanges);
-    } catch (error) {
-      core.warning(`Opening PR failed: ${ error}`);
-      core.info('Attempting to remove branch that was initially pushed to remote');
+    if (!existingBranchName) {
+      core.info('Creating PR');
       try {
-        //we should cleanup dead branch from remote if PR creation is not possible
-        await removeRemoteBranch(branchName, git);
+        if (customId) {
+          pullRequestUrl = await createPr(octokit, branchName, node_id, commitMessage, baseBranchWhereApplyChanges, prIdentifierComment(customId));
+        } else {
+          pullRequestUrl = await createPr(octokit, branchName, node_id, commitMessage, baseBranchWhereApplyChanges);
+        }
       } catch (error) {
-        core.warning(`Could not remove branch in remote after failed PR creation: ${ error}`);
+        core.warning(`Opening PR failed: ${ error}`);
+        core.info('Attempting to remove branch that was initially pushed to remote');
+        try {
+        //we should cleanup dead branch from remote if PR creation is not possible
+          await removeRemoteBranch(branchName, git);
+        } catch (error) {
+          core.warning(`Could not remove branch in remote after failed PR creation: ${ error}`);
+        }
+        continue;
       }
-      continue;
+
+      core.info(`Finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
+    } else {
+      core.info(`Finished with success and new changes pushed to existing remote branch called ${existingBranchName}`);
     }
-      
-    core.info(`Finished with success and PR for ${name} is created -> ${pullRequestUrl}`);
   }
 
   core.endGroup();
@@ -12191,7 +12242,7 @@ exports.getApiBaseUrl = getApiBaseUrl;
 const {readFile} = __webpack_require__(747).promises;
 const execa = __webpack_require__(447);
 
-module.exports = { readPackageJson, parseCommaList, verifyDependencyType, installDependency };
+module.exports = { readPackageJson, parseCommaList, verifyDependencyType, installDependency, prIdentifierComment };
 
 /**
  * @param  {String} path location of package.json file
@@ -12247,6 +12298,10 @@ async function installDependency(name, version, filepath) {
     {cwd}
   );
   return true;
+}
+
+function prIdentifierComment(customId) {
+  return `<!-- ${customId} -->`;
 }
 
 /***/ }),

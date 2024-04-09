@@ -60,6 +60,7 @@ commit_message_prod | It is used as a commit message when bumping dependency fro
 commit_message_dev | It is used as a commit message when bumping dependency from "devDependencies" section in package.json. It is also used as a title of the pull request that is created by this action. | false | `chore: update ${dependencyName} to ${dependencyVersion} version`
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. Branch where changes are introduced is cut from this base branch. If not provided, default branch is used. In the format: `next-major`. | false | -
+custom_id | This custom_id is added as a unique identifier value to the PR created by the bot so the bot can later recognize it as created by the bot, so it updates existing PR instead creating new one. If custom_id is not specified, action assumes that you still want bot to create multiple PRs in one repo, with multiple updates. Once you add the custom_id, you enable flow with active one PR per repo | false | -
 
 ## Example
 
