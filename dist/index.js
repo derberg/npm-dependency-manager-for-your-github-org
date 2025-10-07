@@ -38623,13 +38623,32 @@ async function createPr(octokit, branchName, id, commitMessage, defaultBranch, b
   return pullRequestUrl;
 }
 
-async function getRepoDefaultBranch(octokit, repo, owner) {
-  const { data: { default_branch } } = await octokit.rest.repos.get({
+async function getRepoDefaultBranchAndPackageManager(octokit, repo, owner) {
+  const { data: { default_branch, topics } } = await octokit.rest.repos.get({
     owner,
     repo
   });
 
-  return default_branch;
+  // Currently only pnpm, yarn, bun and npm are supported
+  let packageManager;
+  switch (true) {
+  case topics.includes('pnpm'):
+    packageManager = 'pnpm';
+    break;
+  case topics.includes('yarn'):
+    packageManager = 'yarn';
+    break;
+  case topics.includes('bun'):
+    packageManager = 'bun';
+    break;
+  case topics.includes('npm'):
+    packageManager = 'npm';
+    break;
+  default:
+    packageManager = undefined;
+  }
+
+  return { default_branch, packageManager };
 }
 
 //it either return null which means that there are no existing open PRs 
@@ -38641,7 +38660,7 @@ async function getExistingPr(octokit, repo, owner, customId) {
   
   if (!items || items.length === 0) return null;
 
-  //in case due to sume random issue there are more than on bot PRs, we just pick first from list
+  //in case due to some random issue there are more than one bot PRs, we just pick first from list
   const firstPR = items[0];
   core.info('Found PRs:');
   core.info(JSON.stringify(items, null, 2));
@@ -47839,14 +47858,35 @@ function verifyDependencyType(json, dependencyName) {
   return isProd ? 'PROD' : 'DEV';
 }
 
-async function installDependency(name, version, filepath) {
+function getPackageManager(packageJson) {
+  if (!packageJson || !packageJson.packageManager) return undefined;
+
+  const packageManagerField = packageJson.packageManager.toLowerCase().split('@')[0];
+  
+  if (['npm', 'yarn', 'pnpm', 'bun'].includes(packageManagerField)) {
+    return packageManagerField;
+  }
+
+  return undefined;
+}
+
+async function installDependency(name, version, filepath, packageManager = 'npm') {
   const cwd = filepath.replace('package.json','');
 
-  await execa(
-    'npm',
-    ['install', `${name}@${version}`],
-    {cwd}
-  );
+  if (packageManager === 'yarn') {
+    await execa(
+      'yarn',
+      ['add', `${name}@${version}`],
+      {cwd}
+    );
+  } else {
+    await execa(
+      packageManager,
+      ['add', `${name}@${version}`],
+      {cwd}
+    );
+  }
+
   return true;
 }
 
@@ -47961,12 +48001,14 @@ async function processRepos({
       existingBranchName = await getExistingPr(octokit, name, owner, prIdentifierComment(customId));
     }
 
-    const baseBranchWhereApplyChanges = existingBranchName || baseBranchName || await getRepoDefaultBranch(octokit, name, owner);
+    const { default_branch, packageManager } = await getRepoDefaultBranchAndPackageManager(octokit, name, owner);
+
+    const baseBranchWhereApplyChanges = existingBranchName || baseBranchName || default_branch;
     const branchName = existingBranchName || `bot/bump-${dependencyName}-${dependencyVersion}`;
     const { git, cloneDir, success: setupSuccess } = await setupRepo(name, html_url, baseBranchWhereApplyChanges, branchName, existingBranchName);
     if (!setupSuccess) continue;
 
-    const installResult = await installDependencyInRepo(cloneDir, filepaths, dependencyName, dependencyVersion, name);
+    const installResult = await installDependencyInRepo(cloneDir, filepaths, dependencyName, dependencyVersion, name, packageManager || await getRepoPackageManager(cloneDir, filepaths));
     if (!installResult.success) continue;
 
     const repoDependencyType = installResult.repoDependencyType;
@@ -48101,6 +48143,28 @@ async function setupRepo(name, html_url, baseBranchWhereApplyChanges, branchName
 }
 
 /**
+ * Get the package manager used in a repository
+ * @param {string} cloneDir 
+ * @param {Array<string>} filepaths 
+ * @returns {Promise<string|undefined>} package manager name or undefined if cannot be determined
+ */
+async function getRepoPackageManager(cloneDir, filepaths) {
+  // Check root package.json as a fallback
+  for (const filepath of [...filepaths, 'package.json']) {
+    // Try to determine package manager in use by reading the first valid package.json file
+    try {
+      const packageJson = await readPackageJson(external_path_.join(cloneDir, filepath));
+      const packageManagerInUse = getPackageManager(packageJson);
+      if (packageManagerInUse) return packageManagerInUse;
+    } catch (error) {
+      core.warning(`Could not read package.json at ${filepath} to determine package manager: ${error}`);
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * @description Iterate package.json filepaths in a cloned repo, verify dependency and run install
  * @param {string} cloneDir
  * @param {Array<string>} filepaths
@@ -48109,8 +48173,9 @@ async function setupRepo(name, html_url, baseBranchWhereApplyChanges, branchName
  * @param {string} repoName
  * @returns {Promise<Object>} { success, repoDependencyType }
  */
-async function installDependencyInRepo(cloneDir, filepaths, dependencyName, dependencyVersion, repoName) {
+async function installDependencyInRepo(cloneDir, filepaths, dependencyName, dependencyVersion, repoName, packageManager) {
   let repoDependencyType;
+  core.info(`Installing dependency in ${filepaths.length} package.json files in ${repoName} repo using ${packageManager} as package manager.`);
 
   for (const filepath of filepaths) {
     //Sometimes there might be files like package.json.js or similar as the repository might contain some templated package.json files that cannot be parsed from string to JSON
@@ -48139,15 +48204,13 @@ async function installDependencyInRepo(cloneDir, filepaths, dependencyName, depe
 
     core.info(`Bumping ${dependencyName} in file ${filepath} in ${repoName} repo`);
     try {
-      await installDependency(dependencyName, dependencyVersion, packageJsonLocation);
+      await installDependency(dependencyName, dependencyVersion, packageJsonLocation, packageManager);
     } catch (error) {
       core.warning(`Dependency installation failed: ${ error}`);
       continue;
     }
 
-    if (dependencyType === 'PROD') {
-      repoDependencyType = 'PROD';
-    }
+    if (dependencyType === 'PROD') repoDependencyType = 'PROD';
   }
 
   return { success: true, repoDependencyType };
