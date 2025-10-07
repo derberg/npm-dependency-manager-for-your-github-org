@@ -1,4 +1,4 @@
-const { parseCommaList, verifyDependencyType } = require('../lib/utils');
+import { parseCommaList, verifyDependencyType } from '../lib/utils.js';
 
 describe('parseCommaList()', () => {
   it('parses role model string without issues', () => {
