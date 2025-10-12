@@ -51,6 +51,21 @@ inputs:
       Name of the base branch, where changes in package.json must be applied. It is used in PR creation. If not provided, default branch is used
       In the format: `next-major`.
     required: false
+  packagejson_path_list:
+    description: >
+      Comma-separated list of paths to package.json files if you want to process multiple package.json files located in different places in the repo.
+      Provide just the paths without file name. In the format: `./nested/location,./another/nested/location`.
+    required: false
+  search:
+    description: >
+      Whether to search for multiple package.json files in the repository. If set to true, action ignores packagejson_path and packagejson_path_list inputs. Useful for monorepos.
+    required: false
+    default: "false"
+  ignore_paths:
+    description: >
+      Comma-separated list of paths that should be ignored when searching for package.json files. Only used if search input is set to true.
+      In the format: `./path/to/ignore,./another/path/to/ignore`.
+    required: false
 runs:
   using: node16
   main: dist/index.js
