@@ -61,6 +61,9 @@ commit_message_dev | It is used as a commit message when bumping dependency from
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. Branch where changes are introduced is cut from this base branch. If not provided, default branch is used. In the format: `next-major`. | false | -
 custom_id | This custom_id is added as a unique identifier value to the PR created by the bot so the bot can later recognize it as created by the bot, so it updates existing PR instead creating new one. If custom_id is not specified, action assumes that you still want bot to create multiple PRs in one repo, with multiple updates. Once you add the custom_id, you enable flow with active one PR per repo | false | -
+search | In case you have multiple packages.json files in repository and you want to update by searching for all of them. This is useful for monorepos. | false | `false` (only root package.json is updated)
+packagejson_path_list | Comma-separated list of paths to package.json files if you want to process multiple package.json files located in different places in the repo. Provide just the paths without file name. In the format: `./nested/location,./another/nested/location`. | false | -
+ignore_paths | Comma-separated list of paths to ignore when searching for package.json files if `search` is set to true. In the format: `./path/to/ignore,./another/path/to/ignore`. | false | -
 
 ## Example
 
@@ -102,6 +105,11 @@ jobs:
 # GITHUB_REPOSITORY provide name of org/user and the repo in which this workflow is suppose to run
 # PACKAGE_JSON_LOC=test is a path to package.json file against you want to test
 GITHUB_TOKEN=token PACKAGE_JSON_LOC=test GITHUB_REPOSITORY="lukasz-lab/.github" npm start
+```
+
+```bash
+# LOCAL_REPO_PATH=../test is the path to be appended to all the searched package.json files in case you want to test multiple package.json files in one repo
+GITHUB_TOKEN=token GITHUB_REPOSITORY="lukasz-lab/.github" LOCAL_REPO_PATH=../test npm start
 ```
 
 ## Debug
