@@ -38656,6 +38656,10 @@ async function getRepoDefaultBranchAndPackageManager(octokit, repo, owner) {
 async function getExistingPr(octokit, repo, owner, customId) {
   const { data: { items } } = await octokit.rest.search.issuesAndPullRequests({
     q: `"${customId}" repo:${owner}/${repo} type:pr is:open`,
+    // As non-advanced search is being deprecated, we switch to advanced search to avoid issues in future
+    // More info: https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-issues-and-pull-requests 
+    // https://github.blog/changelog/2025-03-06-github-issues-projects-api-support-for-issues-advanced-search-and-more/
+    advanced_search: true
   });
   
   if (!items || items.length === 0) return null;
@@ -38663,16 +38667,16 @@ async function getExistingPr(octokit, repo, owner, customId) {
   //in case due to some random issue there are more than one bot PRs, we just pick first from list
   const firstPR = items[0];
   core.info('Found PRs:');
-  core.info(JSON.stringify(items, null, 2));
+  core.info(JSON.stringify(items.map(i => ({number: i.number, title: i.title, url: i.html_url})), null, 2));
   core.info('PR that bot operates on:');
-  core.info(JSON.stringify(firstPR, null, 2));
-  const pullInfo = await octokit.pulls.get({
+  core.info(JSON.stringify({number: firstPR.number, title: firstPR.title, url: firstPR.html_url}, null, 2));
+  const pullInfo = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: firstPR.number,
   });
-  core.info('More details about the PR:');
-  core.info(JSON.stringify(pullInfo.data, null, 2));
+  core.debug('More details about the PR:');
+  // core.debug(JSON.stringify(pullInfo.data, null, 2));
   return pullInfo.data.head.ref;
 }
 ;// CONCATENATED MODULE: ./node_modules/is-plain-obj/index.js
@@ -47893,7 +47897,10 @@ async function installDependency(name, version, filepath, packageManager = 'npm'
 function prIdentifierComment(customId) {
   return `<!-- ${customId} -->`;
 }
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(9896);
 ;// CONCATENATED MODULE: ./lib/index.js
+
 
 
 
@@ -47924,7 +47931,7 @@ async function runForPackage(packageJsonPath, octokit) {
   const commitMessageDev = core.getInput('commit_message_dev') || `chore: update ${dependencyName} to ${dependencyVersion} version and others`;
   const reposToIgnore = core.getInput('repos_to_ignore');
   const baseBranchName = core.getInput('base_branch');
-  const customId = core.getInput('custom_id') || false;
+  const customId = process.env.CUSTOM_ID || core.getInput('custom_id') || false;
 
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
   const ignoredRepositories = reposToIgnore ? parseCommaList(reposToIgnore) : [];
@@ -48218,6 +48225,7 @@ async function installDependencyInRepo(cloneDir, filepaths, dependencyName, depe
 
 async function run() {
   const packageJsonPath = process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_path') || './';
+  const clonesDir = external_path_.join(process.cwd(), './clones');
   let packageJsonPathList = parseCommaList(process.env.PACKAGE_JSON_LIST_LOC || core.getInput('packagejson_path_list') || '');
   const search = (process.env.SEARCH || core.getInput('search')) === 'true';
   const ignorePaths = parseCommaList(process.env.IGNORE_PATHS || core.getInput('ignore_paths') || '');
@@ -48236,6 +48244,14 @@ async function run() {
   if (packageJsonPathList.length) {
     core.info(`We will process multiple package.json files provided as a list: ${JSON.stringify(packageJsonPathList, null, 2)}`);
     for (const singlePath of packageJsonPathList) {
+      // Clean up clones directory before processing the next repo to avoid cloning resulting in failures due to existing folder
+      if ((0,external_fs_.existsSync)(clonesDir)) {
+        await (0,promises_namespaceObject.rmdir)(clonesDir, { recursive: true }, (err) => {
+          if (err) {
+            core.warning(`Could not cleanup clones folder: ${err}`);
+          }
+        });
+      }
       await runForPackage(singlePath, octokit);
     }
   } else {
