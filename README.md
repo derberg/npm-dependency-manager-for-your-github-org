@@ -1,5 +1,5 @@
 # Organization Projects' Dependency Manager
-GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization. You run this workflow after npm package release. It searches for libraries in your GitHub organization that depend on this package and bump version through a PR flow.
+GitHub Action that handles automated update of dependencies in package.json between projects from the same GitHub organization. You run this workflow after npm package release. It searches for libraries in your GitHub organization that depend on the released packages and creates pull requests with updated dependencies.
 
 While updating multiple repositories, if there are issues with one of them, the action doesn't fail but continues bumping deps in next repo from the list. 
 
@@ -28,15 +28,17 @@ You cannot apply monorepo everywhere, sometimes it doesn't make sense, and you s
 
 tl;dr To find dependent projects, GitHub Search is utilized.
 
-Before you run this action, I suggest you first use manually the search query used by this action. Go to https://github.com and in search box paste `"@myorg/test" user:myorg in:file filename:package.json` (with proper names of course). Identify repositories that have your package in dependencies, but you do not want to automatically update it. Add it to the list of ignored repositories
+Before you run this action, I suggest you first use manually the search query used by this action. Go to https://github.com and in search box paste `"@myorg/test" user:myorg path:package.json` (with proper names of course). Identify repositories that have your package in dependencies, but you do not want to automatically update it. Add it to the list of ignored repositories
 
-1. You run this action in package `@myorg/test`
-1. After releasing `@myorg/test`, you want latest version of the package to be bumped in other packages in your organization/user called `myorg`
-1. The following search is performed `"@myorg/test" user:myorg in:file filename:package.json`
-1. Search is not perfect, quotations from `"@myorg/test"` are ignored and result can also contain repositories that have only `@myorg/test-sdk` as dependency
-1. All found repositories are cloned (except of `@myorg/test`)
-1. Action verifies if you really have `@myorg/test` in dependencies or devDependencies
-1. Now the rest, bumping + pushing + creating a pull request
+1. You run this action in some repository after releasing a package, let's say `test-packages` in organization `myorg`.
+1. If search is set to false (default), only the package.json from the root or from the provided path is processed. If search is set to true, all package.json files are searched using `repo:myorg/test-packages in:file filename:package.json` query and the following processing steps are applied for each of them:
+    1. The package name and version are read from the package.json file in which the action is running, let's say `@myorg/test` with version `1.0.1`
+    1. The following search is performed `"@myorg/test" user:myorg in:file filename:package.json` (GitHub still uses the Legacy API for search, so `path:` doesn't work, we need to use `filename:` instead)
+    1. Search is not perfect, quotations from `"@myorg/test"` are ignored and result can also contain repositories that have only `@myorg/test-sdk` as dependency
+    1. All found repositories are cloned (except of `@myorg/test`)
+    1. Action verifies if you really have `@myorg/test` in dependencies or devDependencies
+    1. Action checks the package.json to see the package manager used (npm, yarn, pnpm or bun) and runs proper install command.
+    1. Now the rest, bumping + pushing + creating a pull request
 
 Approach with using GitHub search has only one disadvantage, bumping will not work in forks, as forks do not show up in search results. It is still better than cloning all repositories from your organization.
 
@@ -46,7 +48,27 @@ I provided only unit tests for essential utils. There are no integration tests a
 
 ## Action Flow
 
- <img src="diagram.png" alt="flow diagram" width="20%"> 
+```mermaid
+graph TD
+    subgraph Dependency Management
+        A{Search enabled?}
+        A -- No --> B[Pick name and version from root package.json]
+        A -- Yes --> C[Search for all package.json files in repo and read name + version for each]
+        C --> D[Get list of repos from GitHub search that have dependency in their package.json]
+        B --> D
+
+        subgraph Repo Processing Loop
+            D --> E[For each repo: Clone if not ignored and create new branch]
+            E --> F[Verify dependency type dependency or devDependency]
+            F --> G[Detect and choose package manager from: `npm, yarn, pnpm, bun`]
+            G --> H[Bump version locally]
+            H --> I[Push changes and open PR]
+            I --> E
+        end
+    end
+    I --> J[Autoapprove and Automerge PR]
+
+```
 
 ## Configuration
 
@@ -96,6 +118,7 @@ jobs:
           commit_message_prod: "fix: update internal production dependencies"
           #This is commit message and PR title for repos where this package is in devDependencies
           commit_message_dev: "chore: update internal development dependencies"
+          search: true
 ```
 
 ## Development
@@ -109,7 +132,7 @@ GITHUB_TOKEN=token PACKAGE_JSON_LOC=test GITHUB_REPOSITORY="lukasz-lab/.github" 
 
 ```bash
 # LOCAL_REPO_PATH=../test is the path to be appended to all the searched package.json files in case you want to test multiple package.json files in one repo
-GITHUB_TOKEN=token GITHUB_REPOSITORY="lukasz-lab/.github" LOCAL_REPO_PATH=../test npm start
+GITHUB_TOKEN=token GITHUB_REPOSITORY="lukasz-lab/.github" LOCAL_REPO_PATH=../test SEARCH=true npm start
 ```
 
 ## Debug
