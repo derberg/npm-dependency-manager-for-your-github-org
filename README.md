@@ -75,7 +75,7 @@ graph TD
 Name | Description | Required | Default
 --|------|--|--
 github_token | Token to use GitHub API. It must have "repo" scopes so it can push to repos. It cannot be the default GitHub Actions token GITHUB_TOKEN. GitHub Action token's permissions are limited to the repository that contains your workflows. Provide token of the user that has rights to push to the repos that this action is suppose to update.  | true | -
-packagejson_path | Path to package.json file if not located in the root of the project. Provide just the path without file name. In the format: `./nested/location`. | false | `./`
+packagejson_path | Paths to package.json file if not located in the root of the project. Provide just the paths without file name. In the format: `./nested/location`. You can provide single or multiple paths separated by commas. | false | `./`
 committer_username | The username (not display name) of the committer will be used to commit changes in the workflow file in a specific repository. In the format `web-flow`. | false | `web-flow`
 committer_email | The committer's email that will be used in the commit of changes in the workflow file in a specific repository. In the format `noreply@github.com`.| false | `noreply@github.com`
 commit_message_prod | It is used as a commit message when bumping dependency from "dependencies" section in package.json. In case dependency is located in both dependencies and devDependencies of dependant, then prod commit message is used. It is also used as a title of the pull request that is created by this action. | false | `fix: update ${dependencyName} to ${dependencyVersion} version`
@@ -83,9 +83,8 @@ commit_message_dev | It is used as a commit message when bumping dependency from
 repos_to_ignore | Comma-separated list of repositories that should not get updates from this action. Action already ignores the repo in which the action is triggered so you do not need to add it explicitly. In the format `repo1,repo2`. | false | -
 base_branch | Name of the base branch, where changes in package.json must be applied. It is used in PR creation. Branch where changes are introduced is cut from this base branch. If not provided, default branch is used. In the format: `next-major`. | false | -
 custom_id | This custom_id is added as a unique identifier value to the PR created by the bot so the bot can later recognize it as created by the bot, so it updates existing PR instead creating new one. If custom_id is not specified, action assumes that you still want bot to create multiple PRs in one repo, with multiple updates. Once you add the custom_id, you enable flow with active one PR per repo | false | -
-search | In case you have multiple packages.json files in repository and you want to update by searching for all of them. This is useful for monorepos. | false | `false` (only root package.json is updated)
-packagejson_path_list | Comma-separated list of paths to package.json files if you want to process multiple package.json files located in different places in the repo. Provide just the paths without file name. In the format: `./nested/location,./another/nested/location`. | false | -
-ignore_paths | Comma-separated list of paths to ignore when searching for package.json files if `search` is set to true. In the format: `./path/to/ignore,./another/path/to/ignore`. | false | -
+search | In case you have multiple packages.json files in repository and you want to update by searching for all of them. This is useful for monorepos. **Note: Enabling `search` overrides the list of paths provided.** | false | `false` (only root package.json is updated)
+ignore_paths | Comma-separated list of paths to **directories** to ignore when searching for package.json files if `search` is set to true. In the format: `./path/to/ignore,./another/path/to/ignore`. | false | -
 
 ## Example
 
@@ -118,7 +117,31 @@ jobs:
           commit_message_prod: "fix: update internal production dependencies"
           #This is commit message and PR title for repos where this package is in devDependencies
           commit_message_dev: "chore: update internal development dependencies"
+```
+
+### Multiple package.json files
+
+In case you have multiple package.json files in your repository and you want to update them all, you can provide comma-separated list of paths to `packagejson_path` input.
+
+```yml
+      - name: Bumping
+        uses: derberg/npm-dependency-manager-for-your-github-org@v5
+        with:
+          github_token: ${{ secrets.CUSTOM_TOKEN }}
+          packagejson_path: ./path/one,./path/two,./path/three
+```
+
+### Searching for package.json files
+
+In case you have multiple package.json files in your repository and you want to update by searching for all of them, enable `search` input. You can specify ignore paths to exclude certain directories from the search. This is useful for monorepos. Note: Enabling `search` overrides the list of paths provided.
+
+```yml
+      - name: Bumping
+        uses: derberg/npm-dependency-manager-for-your-github-org@v5
+        with:
+          github_token: ${{ secrets.CUSTOM_TOKEN }}
           search: true
+          ignore_paths: ./path/to/ignore,./another/path/to/ignore
 ```
 
 ## Development

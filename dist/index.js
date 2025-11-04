@@ -48224,9 +48224,9 @@ async function installDependencyInRepo(cloneDir, filepaths, dependencyName, depe
 }
 
 async function run() {
-  const packageJsonPath = process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_path') || './';
+  // If no input is provided gives ['./'] as default value to process single package.json in the root of the repository else parses the comma-separated list
+  let packageJsonPaths = parseCommaList(process.env.PACKAGE_JSON_LOC || core.getInput('packagejson_path') || './');
   const clonesDir = external_path_.join(process.cwd(), './clones');
-  let packageJsonPathList = parseCommaList(process.env.PACKAGE_JSON_LIST_LOC || core.getInput('packagejson_path_list') || '');
   const search = (process.env.SEARCH || core.getInput('search')) === 'true';
   const ignorePaths = parseCommaList(process.env.IGNORE_PATHS || core.getInput('ignore_paths') || '');
 
@@ -48235,15 +48235,15 @@ async function run() {
 
   if (search) {
     const repoName = process.env.GITHUB_REPOSITORY;
-    packageJsonPathList = await getPackageJsonList(octokit, repoName);
+    packageJsonPaths = await getPackageJsonList(octokit, repoName);
     if (ignorePaths.length) {
-      packageJsonPathList = packageJsonPathList.filter(p => !ignorePaths.some(ignored => p.includes(ignored)));
+      packageJsonPaths = packageJsonPaths.filter(p => !ignorePaths.some(ignored => p.includes(ignored)));
     }
   }
 
-  if (packageJsonPathList.length) {
-    core.info(`We will process multiple package.json files provided as a list: ${JSON.stringify(packageJsonPathList, null, 2)}`);
-    for (const singlePath of packageJsonPathList) {
+  if (packageJsonPaths.length) {
+    core.info(`We will process multiple package.json files provided as a list: ${JSON.stringify(packageJsonPaths, null, 2)}`);
+    for (const singlePath of packageJsonPaths) {
       // Clean up clones directory before processing the next repo to avoid cloning resulting in failures due to existing folder
       if ((0,external_fs_.existsSync)(clonesDir)) {
         await (0,promises_namespaceObject.rmdir)(clonesDir, { recursive: true }, (err) => {
@@ -48254,9 +48254,6 @@ async function run() {
       }
       await runForPackage(singlePath, octokit);
     }
-  } else {
-    core.info(`We will process single package.json file located in ${packageJsonPath}`);
-    await runForPackage(packageJsonPath, octokit);
   }
 }
 
